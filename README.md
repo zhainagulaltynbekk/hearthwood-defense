@@ -1,5 +1,7 @@
 # Hearthwood Defense
 
+A portrait (phone-first) anime-style tower defense. Four original chibi heroes - **Lyra** the elf archer, **Brann** the goggled engineer, **Yuki** the ice maiden and **Zephyr** the storm wizard - defend Blossom Hollow from slimes, fox spirits, turtle knights, bats and the Ogre King.
+
 A cozy-fantasy 2D tower defense game for the browser, built with TypeScript (strict), Vite and Phaser 4 (WebGL).
 Every texture is generated in code at boot, and every sound is synthesised with the Web Audio API, so the
 project ships no image or audio files.
@@ -25,8 +27,8 @@ The repo includes `.github/workflows/deploy.yml`. After pushing to a GitHub repo
 
 1. On GitHub open **Settings > Pages** and set **Source** to **GitHub Actions** (one time).
 2. Every push builds the game and publishes it at `https://<your-user>.github.io/<repo-name>/`.
-3. Open that link in Chrome on Android. Hold the phone sideways; tapping **Play** goes full screen.
-   Use Chrome's menu > **Add to Home screen** to install it like an app (full screen, landscape, own icon).
+3. Open that link in Chrome on Android, held upright. Tapping **Play** goes full screen.
+   Use Chrome's menu > **Install app** (or **Add to Home screen**) to install it as a real app: full screen, portrait, own icon, works offline.
 
 On touch screens: tap a tower card, tap a tile to preview the tower and its range, tap the same tile again to build.
 Tap a built tower to upgrade, sell or change targeting. Tap the active card again to cancel.

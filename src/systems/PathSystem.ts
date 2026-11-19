@@ -8,6 +8,7 @@ export const TileKind = {
   Tree: 3,
   Rock: 4,
   Flower: 5,
+  Mushroom: 6,
 } as const;
 export type TileKind = (typeof TileKind)[keyof typeof TileKind];
 
@@ -44,6 +45,7 @@ export class PathSystem {
         else if (ch === 'T') kind = TileKind.Tree;
         else if (ch === 'R') kind = TileKind.Rock;
         else if (ch === 'F') kind = TileKind.Flower;
+        else if (ch === 'M') kind = TileKind.Mushroom;
         this.tiles[r * GRID_COLS + c] = kind;
       }
     }

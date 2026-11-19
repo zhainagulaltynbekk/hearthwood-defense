@@ -3,6 +3,8 @@ import { TOWERS, TARGET_MODES, type TargetMode, type TowerDef, type TowerLevelSt
 import { DEPTH } from '../config/layout';
 import { PALETTE } from '../config/palette';
 import { artScale } from '../art/TextureFactory';
+import { BASE_DECK_Y, BASE_H } from '../art/world';
+import { HERO_FEET_Y, HERO_H, WEAPON_PIVOT_X } from '../art/heroes';
 import type { Enemy } from './Enemy';
 import type { TargetingSystem } from '../systems/TargetingSystem';
 import type { Vec2 } from '../systems/PathSystem';
@@ -13,7 +15,12 @@ export interface TowerHost {
   fireLightning(tower: Tower, target: Enemy): void;
 }
 
-const TURRET_LIFT = 7;
+/** Where the hero stands relative to the tile centre, and how big heroes are drawn. */
+const BASE_OFFSET_Y = 6;
+const DECK_Y = BASE_OFFSET_Y - (BASE_H / 2 - BASE_DECK_Y); // hero feet
+const HERO_SCALE = 0.85;
+const CHEST = 17 * HERO_SCALE; // weapon pivot above the feet
+const TURRET_LIFT = -DECK_Y + CHEST;
 const RETARGET_INTERVAL = 0.1;
 const MAX_LEVEL = 3;
 
@@ -28,7 +35,7 @@ export class Tower {
   targetMode: TargetMode = 'first';
   readonly base: Phaser.GameObjects.Image;
   readonly turret: Phaser.GameObjects.Image;
-  readonly shadow: Phaser.GameObjects.Image;
+  readonly hero: Phaser.GameObjects.Image;
   private target: Enemy | null = null;
   private targetUid = 0;
   private cooldown = 0;
@@ -55,9 +62,9 @@ export class Tower {
     this.invested = this.def.levels[0].cost;
     this.aim = -Math.PI / 2 + (Math.random() - 0.5);
 
-    this.shadow = scene.add.image(x, y + 16, 'shadow').setScale(0.55).setAlpha(0.9).setDepth(DEPTH.groundFx);
-    this.base = scene.add.image(x, y, this.baseKey()).setDepth(DEPTH.worldBase + y);
-    this.turret = scene.add.image(x, y - TURRET_LIFT, this.turretKey()).setDepth(DEPTH.worldBase + y + 0.5);
+    this.base = scene.add.image(x, y + BASE_OFFSET_Y, this.baseKey()).setDepth(DEPTH.worldBase + y);
+    this.hero = scene.add.image(x, y + DECK_Y, this.heroKey()).setOrigin(0.5, HERO_FEET_Y / HERO_H).setDepth(DEPTH.worldBase + y + 0.4);
+    this.turret = scene.add.image(x, y - TURRET_LIFT, this.turretKey()).setOrigin(WEAPON_PIVOT_X, 0.5).setDepth(DEPTH.worldBase + y + 0.5);
     this.applyScale();
     this.turret.rotation = this.aim;
     this.updateGlow();
@@ -102,18 +109,23 @@ export class Tower {
     return `tower_${this.def.type}_base_${this.level}`;
   }
 
+  private heroKey(): string {
+    return `hero_${this.def.type}_${this.level}`;
+  }
+
   private turretKey(): string {
     return `tower_${this.def.type}_turret_${this.level}`;
   }
 
   private applyScale(): void {
     this.base.setScale(artScale(this.scene, this.base.texture.key));
-    this.turret.setScale(artScale(this.scene, this.turret.texture.key));
+    this.hero.setScale(artScale(this.scene, this.hero.texture.key) * HERO_SCALE);
+    this.turret.setScale(artScale(this.scene, this.turret.texture.key) * HERO_SCALE);
   }
 
   /** Muzzle position in world space. */
   muzzle(out: Vec2): Vec2 {
-    const len = this.def.type === 'cannon' ? 24 : this.def.type === 'archer' ? 20 : 16;
+    const len = (this.def.type === 'cannon' ? 46 : this.def.type === 'archer' ? 48 : 38) * HERO_SCALE;
     out.x = this.x + Math.cos(this.aim) * len;
     out.y = this.y - TURRET_LIFT + Math.sin(this.aim) * len;
     return out;
@@ -124,6 +136,7 @@ export class Tower {
     this.invested += this.upgradeCost;
     this.level++;
     this.base.setTexture(this.baseKey());
+    this.hero.setTexture(this.heroKey());
     this.turret.setTexture(this.turretKey());
     this.applyScale();
     this.updateGlow();
@@ -155,7 +168,6 @@ export class Tower {
     if (target) {
       desired = Math.atan2(target.y - (this.y - TURRET_LIFT), target.x - this.x);
     } else {
-      this.idleTime += dt;
       desired = this.aim + Math.sin(this.idleTime * 0.7) * 0.004;
     }
 
@@ -175,11 +187,22 @@ export class Tower {
     this.turret.rotation = this.aim;
     this.turret.x = this.x - Math.cos(this.aim) * this.recoil;
     this.turret.y = this.y - TURRET_LIFT - Math.sin(this.aim) * this.recoil;
+    // weapon goes behind the hero when aiming upward
+    this.turret.setDepth(DEPTH.worldBase + this.y + (Math.sin(this.aim) < -0.35 ? 0.3 : 0.5));
+
+    // hero faces the target, breathes while idle and squashes when firing
+    this.idleTime += dt;
+    const face = Math.cos(this.aim) < -0.15 ? true : Math.cos(this.aim) > 0.15 ? false : this.hero.flipX;
+    this.hero.setFlipX(face);
+    const hs = artScale(this.scene, this.hero.texture.key) * HERO_SCALE;
+    const breathe = Math.sin(this.idleTime * 2.4) * 0.025;
+    const punch = this.recoil * 0.018;
+    this.hero.setScale(hs * (1 + punch), hs * (1 + breathe - punch));
   }
 
   destroy(): void {
     this.base.destroy();
     this.turret.destroy();
-    this.shadow.destroy();
+    this.hero.destroy();
   }
 }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DEPTH, RENDER_SCALE } from '../config/layout';
+import { DEPTH, RENDER_SCALE, TOP_PAD } from '../config/layout';
 import { FONT_FAMILY, PALETTE as P, css } from '../config/palette';
 import type { TowerType } from '../config/balance';
 import { NUMBER_FONT } from '../art/TextureFactory';
@@ -13,7 +13,7 @@ const WORD_POOL = 8;
 const RING_POOL = 16;
 const COIN_POOL = 24;
 /** The HUD gold counter's position (UIScene draws it in the same 1280x720 space). */
-const GOLD_COUNTER = { x: 32, y: 24 };
+const GOLD_COUNTER = { x: 38, y: 34 + TOP_PAD };
 
 const MUZZLE_TINT: Record<TowerType, number> = {
   archer: P.gold,
@@ -142,6 +142,21 @@ export class EffectsManager {
     motes.setDepth(DEPTH.fx - 1);
     motes.fastForward(5000);
     this.emitters.push(motes);
+    // cherry blossom petals drifting across the hollow
+    const petals = this.scene.add.particles(0, 0, 'p_petal', {
+      x: { min: x - 40, max: x + w },
+      y: y - 20,
+      lifespan: { min: 9000, max: 14000 },
+      speedX: { min: 10, max: 34 },
+      speedY: { min: 40, max: 70 },
+      rotate: { start: 0, end: 540 },
+      scale: { min: 0.35, max: 0.6 },
+      alpha: { start: 0.95, end: 0.4 },
+      frequency: 650,
+    });
+    petals.setDepth(DEPTH.fx - 1);
+    petals.fastForward(12000);
+    this.emitters.push(petals);
   }
 
   setTimeScale(scale: number): void {

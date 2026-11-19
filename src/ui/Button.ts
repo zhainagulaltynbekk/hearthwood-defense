@@ -3,9 +3,9 @@ import { PALETTE as P } from '../config/palette';
 import { artScale } from '../art/TextureFactory';
 import { makeText } from '../scenes/sceneUtils';
 import { IS_TOUCH, TEX_RES } from '../config/layout';
-import { bakeTexture } from './bake';
+import { bakeCanvas, drawButtonFace } from './bake';
 
-const PAD = 3;
+const PAD = 4;
 
 export interface ButtonOpts {
   width: number;
@@ -58,7 +58,7 @@ export class Button extends Phaser.GameObjects.Container {
     }
     if (hasLabel) {
       const lx = opts.icon ? 8 + 6 * (opts.iconScale ?? 1) : 0;
-      this.label = makeText(scene, lx, 0, opts.label!, { size: opts.fontSize ?? 16, color: P.cream }).setOrigin(0.5);
+      this.label = makeText(scene, lx, 0, opts.label!, { size: opts.fontSize ?? 16, color: P.cream, stroke: P.ink, strokeThickness: 4 }).setOrigin(0.5);
       this.add(this.label);
     }
     if (opts.hint && !IS_TOUCH) {
@@ -140,36 +140,19 @@ export class Button extends Phaser.GameObjects.Container {
 
   private redraw(): void {
     const { width: w, height: h } = this.opts;
-    const r = this.opts.radius ?? Math.min(12, h / 2);
+    const r = this.opts.radius ?? Math.min(14, h / 2);
     const face = this.opts.color ?? P.arcane;
     const s = this.state_;
     const toggled = this.toggled;
-    const key = `btn_${w}x${h}_${r}_${face.toString(16)}_${s}_${toggled ? 1 : 0}`;
+    const key = `btnc_${w}x${h}_${r}_${face.toString(16)}_${s}_${toggled ? 1 : 0}`;
     const tw = w + PAD * 2;
-    const th = h + PAD * 2 + 3;
-    bakeTexture(this.scene, key, tw, th, (g) => {
-      g.translateCanvas(PAD + w / 2, PAD + h / 2);
-      const pressed = s === 'pressed';
-      const lift = pressed ? 1 : 0;
-      // drop shadow / bottom lip
-      g.fillStyle(P.ink, 0.55).fillRoundedRect(-w / 2, -h / 2 + 3, w, h, r);
-      if (s === 'disabled') {
-        g.fillStyle(P.ink, 0.9).fillRoundedRect(-w / 2, -h / 2, w, h, r);
-        g.lineStyle(1.5, P.stone, 0.25).strokeRoundedRect(-w / 2 + 0.5, -h / 2 + 0.5, w - 1, h - 1, r);
-      } else {
-        g.fillStyle(P.ink, 1).fillRoundedRect(-w / 2, -h / 2 + lift, w, h, r);
-        g.fillStyle(face, s === 'hover' ? 0.95 : 0.78).fillRoundedRect(-w / 2 + 2, -h / 2 + 2 + lift, w - 4, h - 4, r - 2);
-        g.fillStyle(P.ink, 0.25).fillRoundedRect(-w / 2 + 2, h / 2 - h * 0.35 + lift, w - 4, h * 0.35 - 2, Math.min(r - 2, h * 0.17));
-        if (!pressed) g.fillStyle(P.cream, s === 'hover' ? 0.3 : 0.18).fillRoundedRect(-w / 2 + 6, -h / 2 + 4, w - 12, Math.max(3, h * 0.16), 3);
-        if (toggled || s === 'hover') g.lineStyle(2, toggled ? P.gold : P.cream, toggled ? 1 : 0.6).strokeRoundedRect(-w / 2 + 1, -h / 2 + 1 + lift, w - 2, h - 2, r);
-        else g.lineStyle(1.2, P.gold, 0.5).strokeRoundedRect(-w / 2 + 1, -h / 2 + 1 + lift, w - 2, h - 2, r);
-      }
-    });
+    const th = h + PAD * 2 + 4;
+    bakeCanvas(this.scene, key, tw, th, (c) => drawButtonFace(c, w, h, PAD, r, face, s, toggled));
     this.bg.setTexture(key).setOrigin((PAD + w / 2) / tw, (PAD + h / 2) / th);
-    const lift = s === 'pressed' ? 1 : 0;
-    const alpha = s === 'disabled' ? 0.4 : 1;
+    const lift = s === 'pressed' ? 2 : 0;
+    const alpha = s === 'disabled' ? 0.45 : 1;
     this.label?.setAlpha(alpha).setY(lift);
-    this.icon?.setAlpha(alpha).setY(this.iconY + lift).setScale(this.baseIconScale * (s === 'hover' ? 1.08 : 1));
+    this.icon?.setAlpha(alpha).setY(this.iconY + lift).setScale(this.baseIconScale * (s === 'hover' ? 1.06 : 1));
     this.hintText?.setAlpha(alpha * 0.9);
   }
 }

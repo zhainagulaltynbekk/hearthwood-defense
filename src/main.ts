@@ -35,3 +35,10 @@ const game = new Phaser.Game({
 });
 
 game.registry.set('audio', new AudioManager());
+
+// Production builds register a service worker so Android Chrome can install the game as an app (and play offline).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => undefined);
+  });
+}

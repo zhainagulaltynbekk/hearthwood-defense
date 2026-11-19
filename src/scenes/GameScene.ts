@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ECONOMY, TOWERS, type DamageType, type EnemyType, type TowerType } from '../config/balance';
-import { DEPTH, GRID_COLS, GRID_ROWS, MAP_HEIGHT, SIDEBAR_X, MAP_WIDTH, MAP_X, MAP_Y, TILE } from '../config/layout';
+import { DEPTH, GRID_COLS, GRID_ROWS, MAP_HEIGHT, MAP_WIDTH, MAP_X, MAP_Y, TILE } from '../config/layout';
 import { PALETTE as P } from '../config/palette';
 import { BOSS_WAVE_INTERVAL } from '../config/waves';
 import { MAP1 } from '../maps/map1';
@@ -187,13 +187,11 @@ export class GameScene extends Phaser.Scene implements TowerHost {
         const kind = this.path.tileAt(c, r);
         const p = this.path.tileCenter(c, r, this.tmp);
         if (kind === TileKind.Tree) {
-          const key = rng.chance(0.55) ? 'tree_0' : 'tree_1';
+          const roll = rng.next();
+          const key = roll < 0.4 ? 'tree_0' : roll < 0.7 ? 'tree_2' : 'tree_1';
           const x = p.x + rng.range(-5, 5);
-          const y = p.y + TILE * 0.38;
-          this.add.image(x, y + 2, 'shadow').setScale(0.75, 0.6).setDepth(DEPTH.groundFx);
-          const tree = this.add.image(x, y, key).setOrigin(0.5, 0.94).setScale(artScale(this, key) * rng.range(0.92, 1.08)).setDepth(DEPTH.worldBase + y);
-          tree.setInteractive({ pixelPerfect: false });
-          tree.on('pointerover', () => this.effects.leafRustle(tree.x, tree.y - 40));
+          const y = p.y + TILE * 0.4;
+          const tree = this.add.image(x, y, key).setOrigin(0.5, 0.94).setScale(artScale(this, key) * rng.range(0.95, 1.12)).setDepth(DEPTH.worldBase + y);
           this.tweens.add({
             targets: tree,
             angle: { from: -1.6, to: 1.6 },
@@ -203,13 +201,15 @@ export class GameScene extends Phaser.Scene implements TowerHost {
             ease: 'Sine.easeInOut',
             delay: rng.range(0, 1500),
           });
+        } else if (kind === TileKind.Mushroom) {
+          const y = p.y + 14;
+          const m = this.add.image(p.x, y, 'mush').setOrigin(0.5, 0.88).setScale(artScale(this, 'mush')).setDepth(DEPTH.worldBase + y);
+          this.tweens.add({ targets: m, scaleY: m.scaleY * 1.05, duration: rng.range(900, 1400), yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: rng.range(0, 800) });
         } else if (kind === TileKind.Rock) {
-          const y = p.y + 10;
-          this.add.image(p.x, y + 4, 'shadow').setScale(0.6, 0.55).setDepth(DEPTH.groundFx);
+          const y = p.y + 14;
           this.add.image(p.x, y, 'rock').setOrigin(0.5, 0.75).setScale(artScale(this, 'rock')).setDepth(DEPTH.worldBase + y);
         } else if (kind === TileKind.Flower) {
-          const y = p.y + 10;
-          this.add.image(p.x, y + 3, 'shadow').setScale(0.6, 0.55).setDepth(DEPTH.groundFx);
+          const y = p.y + 14;
           const bush = this.add.image(p.x, y, 'bush').setOrigin(0.5, 0.85).setScale(artScale(this, 'bush')).setDepth(DEPTH.worldBase + y);
           this.tweens.add({ targets: bush, scaleY: bush.scaleY * 1.04, duration: rng.range(1400, 2000), yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: rng.range(0, 1000) });
         } else if (kind === TileKind.Water) {
@@ -381,6 +381,8 @@ export class GameScene extends Phaser.Scene implements TowerHost {
     this.towers.push(tower);
     this.path.setOccupied(c, r, true);
     // pop-in
+    tower.hero.setAlpha(0);
+    this.tweens.add({ targets: tower.hero, alpha: 1, duration: 260, delay: 120 });
     for (const img of [tower.base, tower.turret]) {
       const s = img.scale;
       img.setScale(s * 0.2);
@@ -423,7 +425,7 @@ export class GameScene extends Phaser.Scene implements TowerHost {
     this.select(null);
     this.hovered = null;
     this.tweens.add({
-      targets: [t.base, t.turret, t.shadow],
+      targets: [t.base, t.turret, t.hero],
       scale: 0,
       alpha: 0,
       duration: 200,
@@ -488,7 +490,7 @@ export class GameScene extends Phaser.Scene implements TowerHost {
     if (n >= 2) {
       const bonus = ECONOMY.waveStartBonus + ECONOMY.waveStartBonusPerWave * n;
       this.economy.earn(bonus);
-      this.effects.floatText(SIDEBAR_X / 2, MAP_Y + 30, `Wave bonus +${bonus}`, P.gold, 18, 1.4);
+      this.effects.floatText(MAP_X + MAP_WIDTH / 2, MAP_Y + 64, `Wave bonus +${bonus}`, P.gold, 22, 1.4);
     }
     this.gradeTarget = Math.min(1, (n - 1) / (this.waves.totalWaves - 1));
     this.events.emit(GameEvents.WaveChanged, n, this.waves.totalWaves);
@@ -732,7 +734,7 @@ export class GameScene extends Phaser.Scene implements TowerHost {
     this.events.emit(GameEvents.GameEnded, victory, reached);
     if (victory) {
       for (let i = 0; i < 6; i++) {
-        this.time.delayedCall(i * 220, () => this.effects.death(Phaser.Math.Between(200, 900), Phaser.Math.Between(150, 550), P.gold, true));
+        this.time.delayedCall(i * 220, () => this.effects.death(Phaser.Math.Between(MAP_X + 120, MAP_X + MAP_WIDTH - 120), Phaser.Math.Between(MAP_Y + 150, MAP_Y + MAP_HEIGHT - 150), P.gold, true));
       }
     } else {
       this.cameras.main.shake(600, 0.006);
